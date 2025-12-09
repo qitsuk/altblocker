@@ -1,15 +1,13 @@
-name: Build AltBlocker
+name: Build and Release AltBlocker
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    tags:
+      - 'v*'   # Trigger når du laver et tag som v0.3.0
 
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -23,7 +21,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build exe with PyInstaller
-        run: pyinstaller main.py --onefile --windowed --name AltBlocker --icon=icon.ico --version-file=version.txt --add-data "icon.ico;."
+        run: pyinstaller main.py --onefile --windowed --name AltBlocker --icon=icon.ico --version-file=version.txt
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -31,18 +29,18 @@ jobs:
           name: AltBlocker-exe
           path: dist/AltBlocker.exe
 
-    release:
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-        - name: Download artifact
-          uses: actions/download-artifact@v4
-          with:
-            name: AltBlocker-exe
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: AltBlocker-exe
 
-        - name: Create GitHub Release
-          uses: softprops/action-gh-release@v2
-          with:
-            files: AltBlocker.exe
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AltBlocker.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

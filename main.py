@@ -13,7 +13,7 @@ import ctypes
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 # Config file path
 def get_config_path():
