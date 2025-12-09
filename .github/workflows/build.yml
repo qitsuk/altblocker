@@ -30,3 +30,19 @@ jobs:
         with:
           name: AltBlocker-exe
           path: dist/AltBlocker.exe
+
+    release:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - name: Download artifact
+          uses: actions/download-artifact@v4
+          with:
+            name: AltBlocker-exe
+
+        - name: Create GitHub Release
+          uses: softprops/action-gh-release@v2
+          with:
+            files: AltBlocker.exe
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
