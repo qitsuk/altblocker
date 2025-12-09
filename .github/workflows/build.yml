@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - 'v*'   # Trigger når du laver et tag som v0.3.0
+      
+permissions:
+  contents: write   # <--- vigtigt
 
 jobs:
   build:
