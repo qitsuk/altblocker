@@ -7,18 +7,24 @@ from PIL import Image, ImageDraw
 import subprocess
 import sys
 import json
-import os, psutil
+import os
+import psutil
 import ctypes
 import winshell
 from win32com.client import Dispatch
 
 def already_running():
     current = os.path.basename(sys.executable if getattr(sys, 'frozen', False) else sys.argv[0])
+    count = 0
     for p in psutil.process_iter(['name']):
-        if p.info['name'] == current and p.pid != os.getpid():
-            return True
+        try:
+            if p.info['name'] == current:
+                count += 1
+                if count > 1:  # Found more than just ourselves
+                    return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
     return False
-    
 
 if already_running():
     sys.exit(0)
@@ -26,7 +32,7 @@ if already_running():
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.6.5"
+__version__ = "0.7.0"
 
 # Config file path
 def get_config_path():
@@ -127,23 +133,35 @@ def enable_start_with_windows():
 
     # Scheduled Task
     task_name = "AltBlocker"
-    cmd = f'schtasks /create /tn "{task_name}" /tr "{target} {args}" /sc onlogon /rl highest /f'
+    cmd = f'schtasks /create /tn "{task_name}" /tr "\"{target}\" {args}" /sc onlogon /rl highest /f'
     subprocess.run(cmd, shell=True, capture_output=True)
 
     # Genvej
-    shell = Dispatch('WScript.Shell')
-    shortcut = shell.CreateShortCut(shortcut_path)
-    shortcut.Targetpath = target
-    shortcut.Arguments = args
-    shortcut.WorkingDirectory = os.path.dirname(target)
-    shortcut.IconLocation = target
-    shortcut.save()
-    
+    try:
+        shell = Dispatch('WScript.Shell')
+        shortcut = shell.CreateShortCut(shortcut_path)
+        shortcut.Targetpath = target
+        shortcut.Arguments = args
+        shortcut.WorkingDirectory = os.path.dirname(target)
+        shortcut.IconLocation = target
+        shortcut.save()
+    except Exception as e:
+        print(f"Error creating shortcut: {e}")
 
 def disable_start_with_windows():
+    # Remove scheduled task
     task_name = "AltBlocker"
     cmd = f'schtasks /delete /tn "{task_name}" /f'
     subprocess.run(cmd, shell=True, capture_output=True)
+    
+    # Remove shortcut
+    try:
+        startup = winshell.startup()
+        shortcut_path = os.path.join(startup, "AltBlocker.lnk")
+        if os.path.exists(shortcut_path):
+            os.remove(shortcut_path)
+    except Exception as e:
+        print(f"Error removing shortcut: {e}")
 
 def toggle_start_with_windows():
     if start_with_windows.get():
@@ -192,7 +210,7 @@ class ToolTip:
 # GUI Setup
 root = tk.Tk()
 root.title(f"Alt Blocker v{__version__}")
-root.geometry("400x600")
+root.geometry("400x650")
 root.configure(bg="#1e293b")
 root.resizable(False, False)
 
@@ -292,6 +310,19 @@ cb_start_minimized = tk.Checkbutton(settings_frame, text="Start minimeret til sy
                                      selectcolor="#2d3748", cursor="hand2",
                                      relief="flat", bd=0, highlightthickness=0)
 cb_start_minimized.pack(anchor="w", padx=15, pady=(5, 15))
+
+# Remove from startup button (only if admin)
+if is_admin():
+    remove_startup_button = tk.Button(settings_frame, text="Fjern alle opstartsindgange", 
+                                     command=lambda: [disable_start_with_windows(), 
+                                                     start_with_windows.set(False), 
+                                                     save_config()],
+                                     font=("Segoe UI", 9),
+                                     bg="#dc2626", fg="white", relief="flat", bd=0,
+                                     cursor="hand2", padx=20, pady=8,
+                                     activebackground="#b91c1c", activeforeground="white")
+    remove_startup_button.pack(anchor="w", padx=15, pady=(0, 15))
+    ToolTip(remove_startup_button, "Fjerner både Task Scheduler opgaven og\ngenvejen fra Startup mappen")
 
 # Exit button
 exit_button = tk.Button(main_container, text="Afslut", 
