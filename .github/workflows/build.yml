@@ -91,7 +91,9 @@ jobs:
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
       - name: Rename artifact with version
-        run: mv AltBlocker.exe AltBlocker_v${TAG}.exe
+        run: | 
+            VER=${GITHUB_REF#refs/tags/v}
+            mv AltBlocker.exe AltBlocker_v${TAG}.exe
         shell: bash
 
       - name: Create GitHub Release with versioned exe
