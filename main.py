@@ -17,7 +17,7 @@ def already_running():
     for p in psutil.process_iter(['name']):
         if p.info['name'] == current and p.pid != os.getpid():
             return True
-        return False
+    return False
     
 
 if already_running():
@@ -26,7 +26,7 @@ if already_running():
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.6.4"
+__version__ = "0.6.5"
 
 # Config file path
 def get_config_path():
