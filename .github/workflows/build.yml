@@ -101,7 +101,7 @@ jobs:
 
       - name: Rename artifact with version
         run: | 
-            mv AltBlocker.exe AltBlocker_v${TAG}.exe
+            mv AltBlocker.exe AltBlocker_${TAG}.exe
         shell: bash
 
       - name: Create GitHub Release with versioned exe
