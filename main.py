@@ -20,7 +20,7 @@ def already_running():
         try:
             if p.info['name'] == current:
                 count += 1
-                if count > 1:  # Found more than just ourselves
+                if count > 1:
                     return True
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
@@ -28,19 +28,17 @@ def already_running():
 
 if already_running():
     sys.exit(0)
-    
+
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
 # Config file path
 def get_config_path():
     if getattr(sys, 'frozen', False):
-        # Running as compiled exe
         app_dir = os.path.dirname(sys.executable)
     else:
-        # Running as script
         app_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(app_dir, 'alt_blocker_config.json')
 
@@ -61,7 +59,6 @@ def save_config():
             json.dump(config, f)
     except Exception as e:
         print(f"Error saving config: {e}")
-
 
 def toggle_alt():
     global alt_blocked
@@ -120,6 +117,9 @@ def hide_window():
     else:
         update_tray_icon()
 
+# --- REMOVED TASK SCHEDULER PART ---
+# Only the Startup shortcut is kept
+
 def enable_start_with_windows():
     startup = winshell.startup()
     shortcut_path = os.path.join(startup, "AltBlocker.lnk")
@@ -131,12 +131,7 @@ def enable_start_with_windows():
         target = sys.executable
         args = sys.argv[0]
 
-    # Scheduled Task
-    task_name = "AltBlocker"
-    cmd = f'schtasks /create /tn "{task_name}" /tr "\"{target}\" {args}" /sc onlogon /rl highest /f'
-    subprocess.run(cmd, shell=True, capture_output=True)
-
-    # Genvej
+    # Create shortcut
     try:
         shell = Dispatch('WScript.Shell')
         shortcut = shell.CreateShortCut(shortcut_path)
@@ -149,12 +144,6 @@ def enable_start_with_windows():
         print(f"Error creating shortcut: {e}")
 
 def disable_start_with_windows():
-    # Remove scheduled task
-    task_name = "AltBlocker"
-    cmd = f'schtasks /delete /tn "{task_name}" /f'
-    subprocess.run(cmd, shell=True, capture_output=True)
-    
-    # Remove shortcut
     try:
         startup = winshell.startup()
         shortcut_path = os.path.join(startup, "AltBlocker.lnk")
@@ -172,13 +161,13 @@ def toggle_start_with_windows():
 
 def on_start_minimized_toggle():
     save_config()
-    
+
 def is_admin():
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
-    
+
 class ToolTip:
     def __init__(self, widget, text):
         self.widget = widget
@@ -186,7 +175,7 @@ class ToolTip:
         self.tipwindow = None
         widget.bind("<Enter>", self.show_tip)
         widget.bind("<Leave>", self.hide_tip)
-        
+
     def show_tip(self, event=None):
         if self.tipwindow or not self.text:
             return
@@ -200,12 +189,12 @@ class ToolTip:
                          background="#ffffe0", relief="solid", borderwidth=1,
                          font=("Segoe UI", 9))
         label.pack(ipadx=5, ipady=2)
-        
+
     def hide_tip(self, event=None):
         if self.tipwindow:
             self.tipwindow.destroy()
             self.tipwindow = None
-        
+
 
 # GUI Setup
 root = tk.Tk()
@@ -214,19 +203,15 @@ root.geometry("400x650")
 root.configure(bg="#1e293b")
 root.resizable(False, False)
 
-# Set window icon
 try:
     if getattr(sys, 'frozen', False):
-        # Running as exe - icon is embedded
         icon_path = os.path.join(sys._MEIPASS, 'icon.ico')
     else:
-        # Running as script - look in same directory
         icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icon.ico')
-    
     if os.path.exists(icon_path):
         root.iconbitmap(icon_path)
-except Exception as e:
-    print(f"Could not load icon: {e}")
+except:
+    pass
 
 # Variables
 config = load_config()
@@ -238,109 +223,80 @@ header = tk.Frame(root, bg="#0f172a", height=80)
 header.pack(fill="x")
 header.pack_propagate(False)
 
-title = tk.Label(header, text="Alt Blocker", font=("Segoe UI", 20, "bold"), 
+title = tk.Label(header, text="Alt Blocker", font=("Segoe UI", 20, "bold"),
                  bg="#0f172a", fg="#e2e8f0")
 title.pack(pady=25)
 
-# Main container
 main_container = tk.Frame(root, bg="#1e293b")
 main_container.pack(fill="both", expand=True, padx=20, pady=20)
 
 # Status card
-status_frame = tk.Frame(main_container, bg="#ef4444", relief="flat", bd=0)
+status_frame = tk.Frame(main_container, bg="#ef4444")
 status_frame.pack(fill="x", pady=(0, 20))
 
 status_content = tk.Frame(status_frame, bg="#ef4444")
 status_content.pack(pady=20)
 
-status_icon = tk.Label(status_content, text="🔒", font=("Segoe UI", 32), 
+status_icon = tk.Label(status_content, text="🔒", font=("Segoe UI", 32),
                        bg="#ef4444", fg="white")
 status_icon.pack()
 
-status_label = tk.Label(status_content, text="Alt-tasten er blokeret", 
-                       font=("Segoe UI", 14, "bold"), bg="#ef4444", fg="white")
+status_label = tk.Label(status_content, text="Alt-tasten er blokeret",
+                        font=("Segoe UI", 14, "bold"), bg="#ef4444", fg="white")
 status_label.pack(pady=(5, 0))
 
-# Toggle button
-toggle_button = tk.Button(main_container, text="Fjern blokering", 
-                         command=toggle_alt, font=("Segoe UI", 11, "bold"),
-                         bg="#dc2626", fg="white", relief="flat", bd=0,
-                         cursor="hand2", padx=30, pady=12,
-                         activebackground="#b91c1c", activeforeground="white")
+toggle_button = tk.Button(main_container, text="Fjern blokering",
+                          command=toggle_alt, font=("Segoe UI", 11, "bold"),
+                          bg="#dc2626", fg="white", relief="flat",
+                          padx=30, pady=12)
 toggle_button.pack(fill="x", pady=(0, 10))
 
-# Minimize button
-tray_button = tk.Button(main_container, text="Minimér til systembakke", 
-                       command=hide_window, font=("Segoe UI", 11),
-                       bg="#334155", fg="#e2e8f0", relief="flat", bd=0,
-                       cursor="hand2", padx=30, pady=12,
-                       activebackground="#475569", activeforeground="white")
+tray_button = tk.Button(main_container, text="Minimér til systembakke",
+                        command=hide_window, font=("Segoe UI", 11),
+                        bg="#334155", fg="#e2e8f0", relief="flat",
+                        padx=30, pady=12)
 tray_button.pack(fill="x", pady=(0, 20))
 
-# Settings section
-settings_frame = tk.Frame(main_container, bg="#2d3748", relief="flat", bd=0)
+# Settings
+settings_frame = tk.Frame(main_container, bg="#2d3748")
 settings_frame.pack(fill="x", pady=(0, 20))
 
-settings_title = tk.Label(settings_frame, text="Indstillinger", 
-                         font=("Segoe UI", 11, "bold"), bg="#2d3748", fg="#e2e8f0")
+settings_title = tk.Label(settings_frame, text="Indstillinger",
+                          font=("Segoe UI", 11, "bold"),
+                          bg="#2d3748", fg="#e2e8f0")
 settings_title.pack(anchor="w", padx=15, pady=(15, 10))
 
 separator = tk.Frame(settings_frame, bg="#4a5568", height=1)
 separator.pack(fill="x", padx=15)
 
-# Checkboxes with modern style
-cb_start_windows = tk.Checkbutton(settings_frame, text="Start med Windows", 
+cb_start_windows = tk.Checkbutton(settings_frame, text="Start med Windows",
                                    variable=start_with_windows,
                                    command=toggle_start_with_windows,
                                    bg="#2d3748", fg="#e2e8f0", font=("Segoe UI", 10),
-                                   activebackground="#2d3748", activeforeground="#e2e8f0",
-                                   selectcolor="#2d3748", cursor="hand2",
-                                   relief="flat", bd=0, highlightthickness=0)
+                                   selectcolor="#2d3748", cursor="hand2")
 cb_start_windows.pack(anchor="w", padx=15, pady=(10, 5))
 
-if not is_admin():
-    cb_start_windows.config(state="disabled")
-    ToolTip(cb_start_windows, "Kræver administratorrettigheder.\nStart programmet som admin for at aktivere.")
-
-cb_start_minimized = tk.Checkbutton(settings_frame, text="Start minimeret til systembakke", 
+cb_start_minimized = tk.Checkbutton(settings_frame, text="Start minimeret til systembakke",
                                      variable=start_minimized,
                                      command=on_start_minimized_toggle,
-                                     bg="#2d3748", fg="#e2e8f0", font=("Segoe UI", 10),
-                                     activebackground="#2d3748", activeforeground="#e2e8f0",
-                                     selectcolor="#2d3748", cursor="hand2",
-                                     relief="flat", bd=0, highlightthickness=0)
+                                     bg="#2d3748", fg="#e2e8f0",
+                                     font=("Segoe UI", 10),
+                                     selectcolor="#2d3748", cursor="hand2")
 cb_start_minimized.pack(anchor="w", padx=15, pady=(5, 15))
 
-# Remove from startup button (only if admin)
-if is_admin():
-    remove_startup_button = tk.Button(settings_frame, text="Fjern alle opstartsindgange", 
-                                     command=lambda: [disable_start_with_windows(), 
-                                                     start_with_windows.set(False), 
-                                                     save_config()],
-                                     font=("Segoe UI", 9),
-                                     bg="#dc2626", fg="white", relief="flat", bd=0,
-                                     cursor="hand2", padx=20, pady=8,
-                                     activebackground="#b91c1c", activeforeground="white")
-    remove_startup_button.pack(anchor="w", padx=15, pady=(0, 15))
-    ToolTip(remove_startup_button, "Fjerner både Task Scheduler opgaven og\ngenvejen fra Startup mappen")
-
-# Exit button
-exit_button = tk.Button(main_container, text="Afslut", 
-                       command=quit_app, font=("Segoe UI", 10),
-                       bg="#374151", fg="#9ca3af", relief="flat", bd=0,
-                       cursor="hand2", padx=30, pady=10,
-                       activebackground="#4b5563", activeforeground="#d1d5db")
+exit_button = tk.Button(main_container, text="Afslut",
+                        command=quit_app, font=("Segoe UI", 10),
+                        bg="#374151", fg="#9ca3af", relief="flat",
+                        padx=30, pady=10)
 exit_button.pack(fill="x", pady=(10, 0))
 
-# Initialize
 keyboard.block_key('alt')
+
 if start_minimized.get():
     root.after(100, hide_window)
 
-# Window close handler
 def on_closing():
     hide_window()
 
 root.protocol("WM_DELETE_WINDOW", on_closing)
-
 root.mainloop()
