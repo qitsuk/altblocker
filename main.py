@@ -7,13 +7,26 @@ from PIL import Image, ImageDraw
 import subprocess
 import sys
 import json
-import os
+import os, psutil
 import ctypes
+import winshell
+from win32com.client import Dispatch
 
+def already_running():
+    current = os.path.basename(sys.executable if getattr(sys, 'frozen', False) else sys.argv[0])
+    for p in psutil.process_iter(['name']):
+        if p.info['name'] == current and p.pid != os.getpid():
+            return True
+        return False
+    
+
+if already_running:
+    sys.exit(0)
+    
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.5.0"
+__version__ = "0.6.1"
 
 # Config file path
 def get_config_path():
@@ -42,6 +55,7 @@ def save_config():
             json.dump(config, f)
     except Exception as e:
         print(f"Error saving config: {e}")
+
 
 def toggle_alt():
     global alt_blocked
@@ -101,16 +115,30 @@ def hide_window():
         update_tray_icon()
 
 def enable_start_with_windows():
+    startup = winshell.startup()
+    shortcut_path = os.path.join(startup, "AltBlocker.lnk")
+
     if getattr(sys, 'frozen', False):
-        # Running as exe
-        exe_path = sys.executable
+        target = sys.executable
+        args = ""
     else:
-        # Running as script
-        exe_path = f'"{sys.executable}" "{sys.argv[0]}"'
-    
+        target = sys.executable
+        args = sys.argv[0]
+
+    # Scheduled Task
     task_name = "AltBlocker"
-    cmd = f'schtasks /create /tn "{task_name}" /tr "{exe_path}" /sc onlogon /rl highest /f'
+    cmd = f'schtasks /create /tn "{task_name}" /tr "{target} {args}" /sc onlogon /rl highest /f'
     subprocess.run(cmd, shell=True, capture_output=True)
+
+    # Genvej
+    shell = Dispatch('WScript.Shell')
+    shortcut = shell.CreateShortCut(shortcut_path)
+    shortcut.Targetpath = target
+    shortcut.Arguments = args
+    shortcut.WorkingDirectory = os.path.dirname(target)
+    shortcut.IconLocation = target
+    shortcut.save()
+    
 
 def disable_start_with_windows():
     task_name = "AltBlocker"

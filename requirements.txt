@@ -2,3 +2,4 @@ pyinstaller
 keyboard
 pystray
 pillow
+winshell
