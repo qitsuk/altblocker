@@ -52,7 +52,7 @@ jobs:
           $out | Set-Content -Encoding UTF8 version.txt
 
       - name: Build exe with PyInstaller (onefile)
-        run: pyinstaller altblocker.spec --onefile --name AltBlocker --icon=icon.ico --version-file=version.txt
+        run: pyinstaller altblocker.spec
 
       - name: Self-sign EXE with temporary self-signed cert
         if: always()

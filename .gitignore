@@ -15,6 +15,7 @@ dist/
 
 # PyInstaller
 *.spec
+!altblocker.spec
 
 # Runtime config
 alt_blocker_config.json
