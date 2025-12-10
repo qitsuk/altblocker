@@ -3,5 +3,4 @@ keyboard
 pystray
 pillow
 winshell
-psutil
 pywin32

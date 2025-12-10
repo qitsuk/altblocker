@@ -8,31 +8,14 @@ import subprocess
 import sys
 import json
 import os
-import psutil
 import ctypes
 import winshell
 from win32com.client import Dispatch
 
-def already_running():
-    current = os.path.basename(sys.executable if getattr(sys, 'frozen', False) else sys.argv[0])
-    count = 0
-    for p in psutil.process_iter(['name']):
-        try:
-            if p.info['name'] == current:
-                count += 1
-                if count > 1:
-                    return True
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
-    return False
-
-if already_running():
-    sys.exit(0)
-
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 
 # Config file path
 def get_config_path():
@@ -117,8 +100,7 @@ def hide_window():
     else:
         update_tray_icon()
 
-# --- REMOVED TASK SCHEDULER PART ---
-# Only the Startup shortcut is kept
+# --- SHORTCUT-ONLY STARTUP (NO SCHEDULED TASKS) ---
 
 def enable_start_with_windows():
     startup = winshell.startup()
@@ -131,7 +113,6 @@ def enable_start_with_windows():
         target = sys.executable
         args = sys.argv[0]
 
-    # Create shortcut
     try:
         shell = Dispatch('WScript.Shell')
         shortcut = shell.CreateShortCut(shortcut_path)
@@ -195,7 +176,6 @@ class ToolTip:
             self.tipwindow.destroy()
             self.tipwindow = None
 
-
 # GUI Setup
 root = tk.Tk()
 root.title(f"Alt Blocker v{__version__}")
@@ -213,12 +193,10 @@ try:
 except:
     pass
 
-# Variables
 config = load_config()
 start_with_windows = tk.BooleanVar(master=root, value=config['start_with_windows'])
 start_minimized = tk.BooleanVar(master=root, value=config['start_minimized'])
 
-# Header
 header = tk.Frame(root, bg="#0f172a", height=80)
 header.pack(fill="x")
 header.pack_propagate(False)
@@ -230,7 +208,6 @@ title.pack(pady=25)
 main_container = tk.Frame(root, bg="#1e293b")
 main_container.pack(fill="both", expand=True, padx=20, pady=20)
 
-# Status card
 status_frame = tk.Frame(main_container, bg="#ef4444")
 status_frame.pack(fill="x", pady=(0, 20))
 
@@ -257,7 +234,6 @@ tray_button = tk.Button(main_container, text="Minimér til systembakke",
                         padx=30, pady=12)
 tray_button.pack(fill="x", pady=(0, 20))
 
-# Settings
 settings_frame = tk.Frame(main_container, bg="#2d3748")
 settings_frame.pack(fill="x", pady=(0, 20))
 
@@ -272,7 +248,8 @@ separator.pack(fill="x", padx=15)
 cb_start_windows = tk.Checkbutton(settings_frame, text="Start med Windows",
                                    variable=start_with_windows,
                                    command=toggle_start_with_windows,
-                                   bg="#2d3748", fg="#e2e8f0", font=("Segoe UI", 10),
+                                   bg="#2d3748", fg="#e2e8f0",
+                                   font=("Segoe UI", 10),
                                    selectcolor="#2d3748", cursor="hand2")
 cb_start_windows.pack(anchor="w", padx=15, pady=(10, 5))
 
@@ -286,8 +263,8 @@ cb_start_minimized.pack(anchor="w", padx=15, pady=(5, 15))
 
 exit_button = tk.Button(main_container, text="Afslut",
                         command=quit_app, font=("Segoe UI", 10),
-                        bg="#374151", fg="#9ca3af", relief="flat",
-                        padx=30, pady=10)
+                        bg="#374151", fg="#9ca3af",
+                        relief="flat", padx=30, pady=10)
 exit_button.pack(fill="x", pady=(10, 0))
 
 keyboard.block_key('alt')
