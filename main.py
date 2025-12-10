@@ -20,13 +20,13 @@ def already_running():
         return False
     
 
-if already_running:
+if already_running():
     sys.exit(0)
     
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 # Config file path
 def get_config_path():
