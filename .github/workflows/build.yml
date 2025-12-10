@@ -39,7 +39,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
+          cache: "pip"   # ✅ caches pip packages automatically
+
+      # Optional: extra caching for PyInstaller build folders
+      - name: Cache PyInstaller build folders
+        uses: actions/cache@v3
+        with:
+          path: |
+            build
+            __pycache__
+          key: ${{ runner.os }}-pyinstaller-${{ github.sha }}
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -92,7 +101,6 @@ jobs:
 
       - name: Rename artifact with version
         run: | 
-            VER=${GITHUB_REF#refs/tags/v}
             mv AltBlocker.exe AltBlocker_v${TAG}.exe
         shell: bash
 
