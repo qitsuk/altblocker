@@ -3,28 +3,73 @@ name: Build and Release AltBlocker
 on:
   push:
     tags:
-      - 'v*'   # Trigger når du laver et tag som v0.3.0
-      
+      - 'v*'   # Trigger on tags like v1.2.3
+
 permissions:
-  contents: write   # <--- vigtigt
+  contents: write
 
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      TZ: 'Europe/Copenhagen'
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
+      - name: Extract version parts from tag
+        id: ver
+        shell: powershell
+        run: |
+          $tag = "${{ github.ref }}" -replace '^refs/tags/v', ''
+          Write-Host "Tag: $tag"
+          $parts = $tag -split '\.'
+          if ($parts.Count -eq 1) { $parts = $parts + '0','0' }
+          if ($parts.Count -eq 2) { $parts = $parts + '0' }
+          $MAJOR = $parts[0]
+          $MINOR = $parts[1]
+          $PATCH = $parts[2]
+          echo "MAJOR=$MAJOR" >> $env:GITHUB_ENV
+          echo "MINOR=$MINOR" >> $env:GITHUB_ENV
+          echo "PATCH=$PATCH" >> $env:GITHUB_ENV
+          echo "TAG=$tag" >> $env:GITHUB_ENV
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Build exe with PyInstaller
-        run: pyinstaller main.py --onefile --windowed --name AltBlocker --icon=icon.ico --version-file=version.txt
+      - name: Create version.txt from template
+        shell: powershell
+        run: |
+          $template = Get-Content version_template.txt -Raw
+          $out = $template -replace '\{MAJOR\}', $env:MAJOR -replace '\{MINOR\}', $env:MINOR -replace '\{PATCH\}', $env:PATCH
+          $out | Set-Content -Encoding UTF8 version.txt
+
+      - name: Build exe with PyInstaller (onefile)
+        run: pyinstaller altblocker.spec --onefile --name AltBlocker --icon=icon.ico --version-file=version.txt
+
+      - name: Self-sign EXE with temporary self-signed cert
+        if: always()
+        shell: powershell
+        run: |
+          $exePath = Join-Path $PWD "dist\AltBlocker.exe"
+          if (-not (Test-Path $exePath)) {
+            Write-Error "EXE not found: $exePath"
+            exit 1
+          }
+          $cert = New-SelfSignedCertificate -Subject "CN=AltBlocker Self-Sign" -Type CodeSigningCert -KeyUsage DigitalSignature -NotAfter (Get-Date).AddYears(5)
+          $cert.FriendlyName = "AltBlocker Self-Signed Code Signing"
+          $sig = Set-AuthenticodeSignature -FilePath $exePath -Certificate $cert -HashAlgorithm SHA256
+          Write-Host "Signature status: $($sig.Status) - $($sig.StatusMessage)"
+          if ($sig.Status -ne "Valid") {
+            Write-Warning "Signature is not valid. Status: $($sig.Status)"
+          }
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -41,9 +86,17 @@ jobs:
         with:
           name: AltBlocker-exe
 
-      - name: Create GitHub Release
+      - name: Extract tag
+        id: tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Rename artifact with version
+        run: mv AltBlocker.exe AltBlocker_v${TAG}.exe
+        shell: bash
+
+      - name: Create GitHub Release with versioned exe
         uses: softprops/action-gh-release@v2
         with:
-          files: AltBlocker.exe
+          files: AltBlocker_v${{ env.TAG }}.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
