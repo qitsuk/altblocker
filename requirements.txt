@@ -3,3 +3,4 @@ keyboard
 pystray
 pillow
 winshell
+psutil

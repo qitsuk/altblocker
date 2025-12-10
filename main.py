@@ -26,7 +26,7 @@ if already_running():
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 # Config file path
 def get_config_path():
