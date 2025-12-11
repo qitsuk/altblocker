@@ -50,13 +50,12 @@ python -m venv {virtual env name}
 # Aktiver det virtuelle miljø
 # Windows:
 # - Powershell:
-  .\{virtual env name}\Scripts\Activate.ps1
-
+.\{virtual env name}\Scripts\Activate.ps1
 # - Commandline:
-  .\{virtual env name}\Scripts\activate.bat
+.\{virtual env name}\Scripts\activate.bat
 
 # Linux:
-  source {virtual env name}/bin/activate
+source {virtual env name}/bin/activate
 
 # Installer dependencies
 pip install -r requirements.txt
