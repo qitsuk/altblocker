@@ -43,6 +43,16 @@ En lille, kraftfuld utility til Windows, der blokerer venstre Alt-tasten. Perfek
 # Klon repo
 git clone https://github.com/<dit-brugernavn>/AltBlocker.git
 cd AltBlocker
+python -m venv {virtual env name}
+
+Windows Powershell:
+.\{virtual env name}\Scripts\Activate.ps1
+
+Windows Commandline:
+.\{virtual env name}\Scripts\activate.bat
+
+Linux:
+source {virtual env name}/bin/activate
 
 # Installer dependencies
 pip install -r requirements.txt
