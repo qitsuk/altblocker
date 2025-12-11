@@ -97,7 +97,7 @@ jobs:
 
       - name: Extract tag
         id: tag
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: echo "TAG=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
 
       - name: Rename artifact with version
         run: | 

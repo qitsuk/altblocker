@@ -15,7 +15,7 @@ from win32com.client import Dispatch
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.16.0"
+__version__ = "0.17.0"
 
 # Config file path
 def get_config_path():
