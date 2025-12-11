@@ -4,7 +4,6 @@ import keyboard
 import threading
 import pystray
 from PIL import Image, ImageDraw
-import subprocess
 import sys
 import json
 import os
@@ -15,7 +14,7 @@ from win32com.client import Dispatch
 alt_blocked = True
 tray_icon = None
 
-__version__ = "0.18.0"
+__version__ = "0.18.1"
 
 # Config file path
 def get_config_path():
